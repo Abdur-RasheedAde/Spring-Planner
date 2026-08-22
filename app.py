@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 st.set_page_config(
     page_title="Spring Planner",
@@ -9,110 +8,125 @@ st.set_page_config(
 )
 
 st.title("🌱 Spring Planner")
-st.subheader(
-    "Where Growth Begins"
-)
+st.subheader("Prioritize your day using the Lean Impact Matrix")
 
+# Store tasks
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
+# Function to classify tasks
+def classify_task(impact, effort):
+
+    if impact == "High" and effort == "Easy":
+        return "🚀 Immediate"
+
+    elif impact == "High" and effort in ["Medium", "Hard"]:
+        return "📅 Plan"
+
+    elif impact in ["Medium", "Low"] and effort == "Easy":
+        return "🤔 Consider"
+
+    else:
+        return "❌ Drop"
+
+# Sidebar
 st.sidebar.header("Add Task")
 
 task = st.sidebar.text_input("Task Name")
 
-category = st.sidebar.selectbox(
-    "Category",
-    [
-        "Career",
-        "Research",
-        "Faith",
-        "Health",
-        "Finance",
-        "Family",
-        "Learning"
-    ]
+impact = st.sidebar.selectbox(
+    "Impact",
+    ["High", "Medium", "Low"]
 )
 
-impact = st.sidebar.slider("Impact",1,5,3)
-effort = st.sidebar.slider("Effort",1,5,3)
-urgency = st.sidebar.slider("Urgency",1,5,3)
-goal = st.sidebar.slider("Goal Alignment",1,5,3)
+effort = st.sidebar.selectbox(
+    "Ease of Execution",
+    ["Easy", "Medium", "Hard"]
+)
 
 if st.sidebar.button("Add Task"):
 
-    if task != "":
+    if task.strip():
 
-        score = (
-            impact * 0.4
-            +
-            urgency * 0.3
-            +
-            goal * 0.2
-            -
-            effort * 0.1
+        category = classify_task(
+            impact,
+            effort
         )
 
         st.session_state.tasks.append(
             {
-                "Task":task,
-                "Category":category,
-                "Impact":impact,
-                "Effort":effort,
-                "Urgency":urgency,
-                "Goal":goal,
-                "Priority Score":round(score,2)
+                "Task": task,
+                "Impact": impact,
+                "Effort": effort,
+                "Category": category
             }
         )
 
+# Display Results
 if st.session_state.tasks:
 
     df = pd.DataFrame(
         st.session_state.tasks
     )
 
-    df = df.sort_values(
-        "Priority Score",
-        ascending=False
-    )
+    st.divider()
 
-    st.subheader("Today's Priorities")
+    col1, col2, col3, col4 = st.columns(4)
 
-    st.dataframe(
-        df,
-        use_container_width=True
-    )
+    immediate = df[df["Category"]=="🚀 Immediate"]
+    plan = df[df["Category"]=="📅 Plan"]
+    consider = df[df["Category"]=="🤔 Consider"]
+    drop = df[df["Category"]=="❌ Drop"]
 
-    st.success(
-        f"🌱 Focus First On: {df.iloc[0]['Task']}"
-    )
+    col1.metric("🚀 Immediate", len(immediate))
+    col2.metric("📅 Plan", len(plan))
+    col3.metric("🤔 Consider", len(consider))
+    col4.metric("❌ Drop", len(drop))
 
-    fig = px.scatter(
-        df,
-        x="Effort",
-        y="Impact",
-        text="Task",
-        size="Priority Score",
-        color="Category",
-        hover_name="Task"
-    )
+    st.divider()
 
-    fig.add_vline(
-        x=3,
-        line_dash="dash"
-    )
+    st.header("🚀 Immediate")
 
-    fig.add_hline(
-        y=3,
-        line_dash="dash"
-    )
+    if len(immediate) > 0:
+        st.dataframe(
+            immediate,
+            use_container_width=True
+        )
+    else:
+        st.info("No Immediate tasks")
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    st.header("📅 Plan")
+
+    if len(plan) > 0:
+        st.dataframe(
+            plan,
+            use_container_width=True
+        )
+    else:
+        st.info("No Plan tasks")
+
+    st.header("🤔 Consider")
+
+    if len(consider) > 0:
+        st.dataframe(
+            consider,
+            use_container_width=True
+        )
+    else:
+        st.info("No Consider tasks")
+
+    st.header("❌ Drop")
+
+    if len(drop) > 0:
+        st.dataframe(
+            drop,
+            use_container_width=True
+        )
+    else:
+        st.info("No Drop tasks")
 
 else:
 
     st.info(
-        "Add your first task."
+        "Add your tasks from the sidebar to begin planning your day."
     )
