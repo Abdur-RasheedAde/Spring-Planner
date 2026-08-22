@@ -1,25 +1,40 @@
 import streamlit as st
 import pandas as pd
 
+# =====================================================
+# PAGE CONFIG
+# =====================================================
+
 st.set_page_config(
     page_title="Spring Planner",
     page_icon="🌱",
     layout="wide"
 )
 
+# =====================================================
+# TITLE
+# =====================================================
+
 st.title("🌱 Spring Planner")
 st.subheader(
-    "Plan your day using the Lean Impact Matrix"
+    "Stop Managing Tasks. Start Prioritizing Impact."
 )
 
-# Storage
+# =====================================================
+# SESSION STATE
+# =====================================================
 
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# Functions
+if "results" not in st.session_state:
+    st.session_state.results = []
 
-def calculate_score(impact, ease):
+# =====================================================
+# FUNCTIONS
+# =====================================================
+
+def calculate_score(impact, effort):
 
     impact_score = {
         "High": 3,
@@ -27,41 +42,51 @@ def calculate_score(impact, ease):
         "Low": 1
     }
 
-    ease_score = {
+    effort_score = {
         "Easy": 3,
         "Medium": 2,
         "Hard": 1
     }
 
-    return impact_score[impact] * ease_score[ease]
+    return impact_score[impact] * effort_score[effort]
 
 
-def get_priority(impact, ease):
+def get_priority(impact, effort):
 
-    if impact == "High" and ease in ["Easy", "Medium"]:
+    if impact == "High" and effort == "Easy":
         return "🚀 Immediate"
 
-    elif impact == "High" and ease == "Hard":
+    elif impact == "High" and effort == "Medium":
+        return "🚀 Immediate"
+
+    elif impact == "High" and effort == "Hard":
+        return "📅 Plan"
+
+    elif impact == "Medium" and effort == "Easy":
         return "📅 Plan"
 
     elif impact == "Medium":
         return "🤔 Consider"
 
-    elif impact == "Low" and ease == "Easy":
+    elif impact == "Low" and effort == "Easy":
         return "🤔 Consider"
 
     else:
         return "❌ Drop"
 
 
-# Input Section
+# =====================================================
+# TASK ENTRY
+# =====================================================
 
-st.header("Add Tasks")
+st.header("➕ Add Tasks")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    task = st.text_input("Task Name")
+    task_name = st.text_input(
+        "Task Name"
+    )
 
 with col2:
     impact = st.selectbox(
@@ -70,72 +95,53 @@ with col2:
     )
 
 with col3:
-    ease = st.selectbox(
-        "Ease",
+    effort = st.selectbox(
+        "Ease of Execution",
         ["Easy", "Medium", "Hard"]
     )
 
 if st.button("➕ Add Task"):
 
-    if task.strip():
+    if task_name.strip() != "":
 
         st.session_state.tasks.append(
             {
-                "Task": task,
+                "Task": task_name,
                 "Impact": impact,
-                "Ease": ease
+                "Effort": effort
             }
         )
 
-        st.success("Task Added")
+        st.success(f"✅ '{task_name}' added")
 
-# Show current queue
+# =====================================================
+# TASKS PENDING ANALYSIS
+# =====================================================
 
 if len(st.session_state.tasks) > 0:
 
-    st.subheader("Tasks Waiting For Analysis")
+    st.subheader("📋 Tasks Waiting For Analysis")
 
     st.dataframe(
         pd.DataFrame(st.session_state.tasks),
         use_container_width=True
     )
 
-# Analyze
+# =====================================================
+# ANALYZE BUTTON
+# =====================================================
 
 if st.button("📊 Analyze My Day"):
 
     results = []
 
-    for row in st.session_state.tasks:
+    for task in st.session_state.tasks:
 
         score = calculate_score(
-            row["Impact"],
-            row["Ease"]
+            task["Impact"],
+            task["Effort"]
         )
 
         priority = get_priority(
-            row["Impact"],
-            row["Ease"]
-        )
-
-        results.append(
-            {
-                "Task": row["Task"],
-                "Priority": priority,
-                "Matrix Score": score
-            }
-        )
-
-    df = pd.DataFrame(results)
-
-    df = df.sort_values(
-        by="Matrix Score",
-        ascending=False
-    )
-
-    st.header("🌱 Recommended Task Order")
-
-    st.dataframe(
-        df,
-        use_container_width=True
-    )
+            task["Impact"],
+      
