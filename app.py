@@ -8,125 +8,134 @@ st.set_page_config(
 )
 
 st.title("🌱 Spring Planner")
-st.subheader("Prioritize your day using the Lean Impact Matrix")
+st.subheader(
+    "Plan your day using the Lean Impact Matrix"
+)
 
-# Store tasks
+# Storage
+
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# Function to classify tasks
-def classify_task(impact, effort):
+# Functions
 
-    if impact == "High" and effort == "Easy":
+def calculate_score(impact, ease):
+
+    impact_score = {
+        "High": 3,
+        "Medium": 2,
+        "Low": 1
+    }
+
+    ease_score = {
+        "Easy": 3,
+        "Medium": 2,
+        "Hard": 1
+    }
+
+    return impact_score[impact] * ease_score[ease]
+
+
+def get_priority(impact, ease):
+
+    if impact == "High" and ease in ["Easy", "Medium"]:
         return "🚀 Immediate"
 
-    elif impact == "High" and effort in ["Medium", "Hard"]:
+    elif impact == "High" and ease == "Hard":
         return "📅 Plan"
 
-    elif impact in ["Medium", "Low"] and effort == "Easy":
+    elif impact == "Medium":
+        return "🤔 Consider"
+
+    elif impact == "Low" and ease == "Easy":
         return "🤔 Consider"
 
     else:
         return "❌ Drop"
 
-# Sidebar
-st.sidebar.header("Add Task")
 
-task = st.sidebar.text_input("Task Name")
+# Input Section
 
-impact = st.sidebar.selectbox(
-    "Impact",
-    ["High", "Medium", "Low"]
-)
+st.header("Add Tasks")
 
-effort = st.sidebar.selectbox(
-    "Ease of Execution",
-    ["Easy", "Medium", "Hard"]
-)
+col1, col2, col3 = st.columns(3)
 
-if st.sidebar.button("Add Task"):
+with col1:
+    task = st.text_input("Task Name")
+
+with col2:
+    impact = st.selectbox(
+        "Impact",
+        ["High", "Medium", "Low"]
+    )
+
+with col3:
+    ease = st.selectbox(
+        "Ease",
+        ["Easy", "Medium", "Hard"]
+    )
+
+if st.button("➕ Add Task"):
 
     if task.strip():
-
-        category = classify_task(
-            impact,
-            effort
-        )
 
         st.session_state.tasks.append(
             {
                 "Task": task,
                 "Impact": impact,
-                "Effort": effort,
-                "Category": category
+                "Ease": ease
             }
         )
 
-# Display Results
-if st.session_state.tasks:
+        st.success("Task Added")
 
-    df = pd.DataFrame(
-        st.session_state.tasks
+# Show current queue
+
+if len(st.session_state.tasks) > 0:
+
+    st.subheader("Tasks Waiting For Analysis")
+
+    st.dataframe(
+        pd.DataFrame(st.session_state.tasks),
+        use_container_width=True
     )
 
-    st.divider()
+# Analyze
 
-    col1, col2, col3, col4 = st.columns(4)
+if st.button("📊 Analyze My Day"):
 
-    immediate = df[df["Category"]=="🚀 Immediate"]
-    plan = df[df["Category"]=="📅 Plan"]
-    consider = df[df["Category"]=="🤔 Consider"]
-    drop = df[df["Category"]=="❌ Drop"]
+    results = []
 
-    col1.metric("🚀 Immediate", len(immediate))
-    col2.metric("📅 Plan", len(plan))
-    col3.metric("🤔 Consider", len(consider))
-    col4.metric("❌ Drop", len(drop))
+    for row in st.session_state.tasks:
 
-    st.divider()
-
-    st.header("🚀 Immediate")
-
-    if len(immediate) > 0:
-        st.dataframe(
-            immediate,
-            use_container_width=True
+        score = calculate_score(
+            row["Impact"],
+            row["Ease"]
         )
-    else:
-        st.info("No Immediate tasks")
 
-    st.header("📅 Plan")
-
-    if len(plan) > 0:
-        st.dataframe(
-            plan,
-            use_container_width=True
+        priority = get_priority(
+            row["Impact"],
+            row["Ease"]
         )
-    else:
-        st.info("No Plan tasks")
 
-    st.header("🤔 Consider")
-
-    if len(consider) > 0:
-        st.dataframe(
-            consider,
-            use_container_width=True
+        results.append(
+            {
+                "Task": row["Task"],
+                "Priority": priority,
+                "Matrix Score": score
+            }
         )
-    else:
-        st.info("No Consider tasks")
 
-    st.header("❌ Drop")
+    df = pd.DataFrame(results)
 
-    if len(drop) > 0:
-        st.dataframe(
-            drop,
-            use_container_width=True
-        )
-    else:
-        st.info("No Drop tasks")
+    df = df.sort_values(
+        by="Matrix Score",
+        ascending=False
+    )
 
-else:
+    st.header("🌱 Recommended Task Order")
 
-    st.info(
-        "Add your tasks from the sidebar to begin planning your day."
+    st.dataframe(
+        df,
+        use_container_width=True
     )
